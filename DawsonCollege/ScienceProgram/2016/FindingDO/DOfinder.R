@@ -81,6 +81,6 @@ lost_students_last_state[,state:='Out']
 DORate<-lost_students_last_state[,.N]/(lost_students_last_state[,.N] + nrow(student_term_program_graduated[by=student_number][state=='Graduated']))
 DORate
 #0.322
-
+#Changed nothing.
 return(lost_students_last_state)
 }
