@@ -26,10 +26,15 @@ nrow(DO1[ansessionDebut==ansessionFin])
 #Let's start by pulling out all the IDEdutiantSession related to our DOs
 IDESDO<-etudiant_session[student_number %in% DO$student_number][,.(student_number,IDEtudiantSession,SPE,
                                                                    TypeFrequentation)]
-#I don't lose a single student doing it this way: YAy!
+IDESDO[,.N,by=student_number][N==1]
+#15k DOs took only 1 class!!!!!
+#I don't lose a single student doing it this way: YAy! My 36k DOs have 128k classes.
 
 DO2<-inscription[IDEtudiantSession %in% IDESDO$IDEtudiantSession][,.(IDEtudiantSession,Langue,Note,CoteR)]
-#I seem to lose a big quantity of people here...
+#I seem to lose a big quantity of people here... who are they and why am I losing them?
+#Figure out if the 1319 students who have the same start and fininsh registered for many classes?
+
+
 
 #Need to figure out if for these students during their path they switched from full time to part time to drop.
 #Make Sam's states variable again, but with a semester-by-semester path.
