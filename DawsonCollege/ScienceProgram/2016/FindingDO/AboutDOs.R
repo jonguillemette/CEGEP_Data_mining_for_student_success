@@ -1,5 +1,9 @@
 # This file will use the list of DO found in the DOfinder files and use it to figure things out about them.
 
+
+#Can you finish cegep without graduating: is there any state in which this is possible? Just took 1 class to get into
+#some program at Uni? 
+
 load('student_success.RData')
 
 library(data.table)
@@ -9,6 +13,7 @@ library(ggplot2)
 
 source('DOfinder.R')
 DO<-DOfinder(20103)
+#All my DO's are unique and come from the previous file.
 
 #Let's make a DT with all the info about the DOs
 #Get the population indicator from admission
@@ -16,25 +21,63 @@ DO<-DOfinder(20103)
 #Gender from etudiant, langue maternelle, postal code?
 #Note, COteR from inscription table
 
-DO1<-admission[student_number %in% DO$student_number][,.(student_number,speAdmission,ansessionDebut,ansessionFin,
-                                                         TypeAdmission,population)]
-#ODD, the number of students I get from this is different than the number of DO I found
+#Leftout<- DO[student_number %NI% DO1$student_number]
+#This gives 15k students who are in the DOfinder list, but NOT the admission's table.  
+#Correct<-DO[student_number %NI% Leftout$student_number]
+#This is the unique number of students who are in the DOlis and in the admissions table. 
 
-nrow(DO1[ansessionDebut==ansessionFin])
+DO1<-admission[student_number %in% DO$student_number][population=="A"][,.(student_number,speAdmission,ansessionDebut,ansessionFin,
+                                                         TypeAdmission,population)]
+#length(unique(DO1$student_number))
+#20651
+#length(DO1$student_number)
+#26945
+#There are 6k doublets in the DO1 table Who are they?
+#This means that there are 6k students who have DO at least once (maybe twice) and also come back at least once.
+
+doublets<-DO1[,.SD,by=student_number][duplicated(DO1,by="student_number")]
+
+#I also want to know who is in DO, but not in admissions...
+Leftout<- DO[student_number %NI% admission$student_number]
+length(unique(Leftout$student_number))
+#15313
+#These people mostly (15629) have SO as a type de frequentation. 
+#Has anyone with SO as frequentation ever graduated?
+gradcheck<- etudiant_session[student_number %in% student_certification$student_number][,.(student_number,TypeFrequentation)]
+#Something weird with the SOs. MANY students have them:
+length(unique(gradcheck$student_number[which(gradcheck$TypeFrequentation=="SO")]))
+#17817
+length(unique(gradcheck$student_number))
+#28349
+
+#If I look in the etudiant_session table, I get that they are all there... we followed our own advice to ignore the
+#admission table. 
+
+#There are 10k people who were re-admitted! (readmission ==1)
+
+#nrow(DO1[ansessionDebut==ansessionFin])
+#1300
 
 #For the inscription table, it gets ugly as there are many IDedtudiantsession related to a single Studentnumber
 #Let's start by pulling out all the IDEdutiantSession related to our DOs
 IDESDO<-etudiant_session[student_number %in% DO$student_number][,.(student_number,IDEtudiantSession,SPE,
                                                                    TypeFrequentation)]
-IDESDO[,.N,by=student_number][N==1]
+#IDESDO[,.N,by=student_number][N==1]
 #15k DOs took only 1 class!!!!!
 #I don't lose a single student doing it this way: YAy! My 36k DOs have 128k classes.
+#Weird that only 1300 students (from nrowDO1) have stayed only 1 semester, but I have 15k classes. I would expect people
+#who have only taken 1 class to have only stayed 1 semester... So unless they are taking 10 classes...
 
 DO2<-inscription[IDEtudiantSession %in% IDESDO$IDEtudiantSession][,.(IDEtudiantSession,Langue,Note,CoteR)]
+
 #I seem to lose a big quantity of people here... who are they and why am I losing them?
+#length(unique(DO2$IDEtudiantSession))
+#82710 compared to 128k.
+
+#Who shows up in IDESDO but that doesn't show up in inscription?
+leftout2<- IDESDO[IDEtudiantSession %NI% inscription$IDEtudiantSession]
+
 #Figure out if the 1319 students who have the same start and fininsh registered for many classes?
-
-
 
 #Need to figure out if for these students during their path they switched from full time to part time to drop.
 #Make Sam's states variable again, but with a semester-by-semester path.

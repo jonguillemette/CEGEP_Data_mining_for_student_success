@@ -1,7 +1,7 @@
 #This file will find the people who are most likely to be Drop-Outs. NOT TRANSFERS!
 #The goal is to eventually compare this with a list of students who were intervened on to see if it worked.
 
-#THe scope will be only science to somplify the code for the first time around.
+#A drop out is defined as someone who did not graduate. We check the certification table to check that. 
 
 load('student_success.RData')
 
@@ -38,8 +38,7 @@ all_enrollment_by_semester_program.cast<-dcast.data.table(all_enrollment_by_seme
 #write.csv(all_enrollment_by_semester,'predict-all-enrollement-tables/all_enrollment_by_semester.csv', row.names = F)
 #write.csv(all_enrollment_by_semester_program,'predict-all-enrollement-tables/all_enrollment_by_semester_program.csv',row.names = F)
 #write.csv(all_enrollment_by_semester_program.cast,'predict-all-enrollement-tables/all_enrollment_by_semester_program_matrix.csv',row.names = F)
-all_enrollment_by_semester[order(ansession)] %>% knitr::kable(row.names = F,
-                                                                  caption = 'Total all Enrollment per semester')
+all_enrollment_by_semester[order(ansession)] %>% knitr::kable(row.names = F,                                                                  caption = 'Total all Enrollment per semester')
 
 ## ---- graduation-dates ----
 student_certification_all<-
@@ -73,7 +72,10 @@ student_term_program_graduated[program %NI% grad_codes,state:=paste0(semester,'-
 student_term_program_graduated[program %in% grad_codes,state:='Graduated']
 
 lost_students_last_state<-student_term_program_graduated[,.SD[.N],by=student_number][state!='Graduated'][ansession!=20163]
+#Make a separate data table to each student number. 
 lost_students_last_state[,state:='Out']
+
+#CHECK THE PEOPLE WHO HAVE A HIATUS
 
 #The list of lost_students has now removed any student who has not transferred.
 #The last step to catch people who are not DO, would be to check certification tables of other colleges.
