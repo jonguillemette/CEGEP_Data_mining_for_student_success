@@ -21,6 +21,10 @@ DO<-DOfinder(20103)
 #Gender from etudiant, langue maternelle, postal code?
 #Note, COteR from inscription table
 
+#Start fresh by looking at the SO status for many of the DOs. The hunch is that MANY people DO without ever registering
+#for a single class meaning that they would show up in admission, but not in inscription. 
+#this may be as large as HALF the DOs ever admitted by the college. 
+
 #Leftout<- DO[student_number %NI% DO1$student_number]
 #This gives 15k students who are in the DOfinder list, but NOT the admission's table.  
 #Correct<-DO[student_number %NI% Leftout$student_number]
@@ -41,6 +45,8 @@ doublets<-DO1[,.SD,by=student_number][duplicated(DO1,by="student_number")]
 Leftout<- DO[student_number %NI% admission$student_number]
 length(unique(Leftout$student_number))
 #15313
+DOstat<- etudiant_session[student_number %in% Leftout$student_number][,.(student_number,TypeFrequentation,ansession,IDEtudiantSession)]
+DOstat[,.N, by=TypeFrequentation]
 #These people mostly (15629) have SO as a type de frequentation. 
 #Has anyone with SO as frequentation ever graduated?
 gradcheck<- etudiant_session[student_number %in% student_certification$student_number][,.(student_number,TypeFrequentation)]
@@ -49,9 +55,12 @@ length(unique(gradcheck$student_number[which(gradcheck$TypeFrequentation=="SO")]
 #17817
 length(unique(gradcheck$student_number))
 #28349
+#Find the number of DO who have only 1 semester in the college with SO as their status. 
+#There are 167k lines to grad check (because they all show up a fuck ton of times (many classes) with 28k unique stus
+#There are 15k lines to DOstat and 15k uniques because they all only took 1 class (if that...)
 
-#If I look in the etudiant_session table, I get that they are all there... we followed our own advice to ignore the
-#admission table. 
+#The source of the SO may be that 
+
 
 #There are 10k people who were re-admitted! (readmission ==1)
 
