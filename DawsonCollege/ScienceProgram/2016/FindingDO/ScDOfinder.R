@@ -4,7 +4,7 @@
 #THe scope will be only science to somplify the code for the first time around.
 
 load('student_success.RData')
-earliest.ansession<-20103
+
 
 library(data.table)
 library(magrittr)
@@ -15,7 +15,11 @@ source('predict-science-enrollment-functions.R')
 '%NI%' <- function(x,y)!('%in%'(x,y))
 science.prog.codes <- c('200P1','200P2','200H1','200H2','200E2','08162','08164','09162','09164')
 
-## ---- count-students-per-semester ----
+ScDOfinder<-function(a){
+  
+  earliest.ansession<-a
+
+## ---- count-students-per-semester
 etudiant_session.science<-etudiant_session[program %in% science.prog.codes][ansession>=earliest.ansession]
 
 inscription.science<-inscription[IDEtudiantSession %in% etudiant_session.science$IDEtudiantSession]
@@ -85,4 +89,7 @@ lost_students_last_state[,state:='Out']
 ScDORate<-lost_students_last_state[,.N]/(lost_students_last_state[,.N] + nrow(student_term_program_graduated[by=student_number][state=='Graduated']))
 ScDORate
 #.196
+return(lost_students_last_state)
+}
+
 
