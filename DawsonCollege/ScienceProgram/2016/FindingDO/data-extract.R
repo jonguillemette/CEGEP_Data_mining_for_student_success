@@ -1,71 +1,109 @@
 rm(list=ls())
 library(data.table)
 library(magrittr)
+library(stringr)
 
-etudiant.headers <- c('student_number','date_naissance',
-                      'sexe','langue_maternelle','birth_place',
-                      'indicateur_deficience',
-                      'cote_r','code_postal')
-etudiant <-fread("Student Success/Dawson/Etudiant1.txt",sep = ',',
-                 col.names = etudiant.headers)
+# path.to.data.directory <- '~/Documents/science_program/onGoingEval/CLARA_database_mirror/DawsonCollege/'
+path.to.data.directory <- 'Student Success/Dawson/'
 
+## ---- etudiant ----
+clara.table<-'Etudiant'
+fmt<-fread(paste0(path.to.data.directory,clara.table,'.fmt'))
 
-admission.headers <- c('IDAdmission', 'student_number','spe',
-                      'speAdmission', 'ansessionDebut',
-                      'ansessionFin', 'Withdrawal_date', 
-                      'TypeAdmission', 'NoTour','reforme', 
-                      'cohorte','population', 
-                      'IndicateurReadmission', 'program')
-admission <-fread("Student Success/Dawson/Admission.txt",sep = ',',
-                 col.names = admission.headers)
+lines<-paste0(path.to.data.directory,clara.table,'.txt') %>% readLines()
+bad.rows <- which(stringr::str_count(lines,',') == 8)
+for (i in 1:length(bad.rows)){
+  chartorem<-gregexpr(pattern =',',lines[bad.rows[i]])[[1]][5]
+  halfstr<-substr(lines[bad.rows[i]],0,chartorem-1)
+  halfstr2<-substr(lines[bad.rows[i]],chartorem+1,stringr::str_length(lines[bad.rows[i]]))
+  lines[bad.rows[i]]<-stringr::str_c(halfstr,halfstr2,sep="")
+}
+li<-paste(lines,collapse='\n')
+write(li,"Student Success/Dawson/EtudiantClean.txt",ncolumns=8)
 
-etudiant_session.headers<- c('IDEtudiantSession', 'student_number',
-                     'program', 'ansession','Etat', 
-                     'SPE','TypeFrequentation',
-                     'IndicateurCommandite',
-                     'IndicateurFinissant', 
-                     'IndicateurFinissantCalcule',
-                     'Moyenne',
-                     'division')
-etudiant_session <-fread("Student Success/Dawson/EtudiantSession.txt",sep = ',',
-                  col.names = etudiant_session.headers)
+etudiant <-fread(paste0(path.to.data.directory,'EtudiantClean','.txt'),sep = ',',col.names = fmt$V7)
 
-cours.headers <- c('IDGroupe', 'course', 
-                   'section','PonderationTheo',
-                   'PonderationLab','PonderationPersonnel',
-                   'Credite', 'SeuilPassageNoteFinale',
-                   'NbEtudiantsPremierJourClasse',
-                   'NbEtudiantsAuRecensement', 
-                   'MoyenneGroupeEvaluation')
-cours <-fread("Student Success/Dawson/Cours.txt",sep = ',',
-                         col.names = cours.headers)
+## ---- admission ----
+clara.table<-'Admission'
+fmt<-fread(paste0(path.to.data.directory,clara.table,'.fmt'))
 
-etudes_precedentes.headers <- c('idEtudeAnterieure','student_number',
-                                'EtatEtudeSecondaire','EtatEtudeSecondaireAdulte',
-                                'EtatEtudeCollegial','EtatEtudeUniversitaire')
-etudes_precedentes <- fread("Student Success/Dawson/EtudesPrecedentes.txt",sep = ",",
-                            col.names = etudes_precedentes.headers)
+admission <-fread(paste0(path.to.data.directory,clara.table,'.txt'),sep = ',',
+                  col.names = fmt$V7)
 
-inscription.headers <- c('IDInscription','IDEtudiantSession','IDGroupe','TypeRAF',
-                         'ModeEnseignementDistance','Ponderation',
-                         'NbAbsences','Langue','MoyenneGroupeEvaluation',
-                         'Etat','IndicateurCoursSuivi','IndicateurCoursInscrit',
-                         'IndicateurSupprime','DateHeureSynchronisationMinistere',
-                         'MoyenneNotesRetenuesCoteR','CodeRemarque','Note','CoteR',
-                         'division')
-inscription <- fread("Student Success/Dawson/Inscription.txt", sep = ",",
-                     col.names = inscription.headers)
+## ---- etudiant-session ----
+clara.table<-'EtudiantSession'
+fmt<-fread(paste0(path.to.data.directory,clara.table,'.fmt'))
 
-student_certification.headers <- c('student_number','IDType',
-                                   'ansession','program','division')
-student_certification <-fread("Student Success/Dawson/StudentCertification.txt", 
-                              col.names = student_certification.headers)
+etudiant_session <-fread(paste0(path.to.data.directory,clara.table,'.txt'),sep = ',',
+                         col.names = fmt$V7,drop=nrow(fmt))
 
-certifcation_type.headers <- c('IDType','numero','titre')
-certifcation_type <- fread("Student Success/Dawson/CertificationType.txt",
-                           col.names = certifcation_type.headers)
-eval_etudiant.headers<-c('student_number','ansession','IdGroupe','MSA')
-eval_etudiant <- fread("Student Success/Dawson/EvaluationEtudiant.txt",col.names= eval_etudiant.headers)
+## ---- cours ----
+clara.table<-'Cours'
+fmt<-fread(paste0(path.to.data.directory,clara.table,'.fmt'))
 
-save(admission,certifcation_type,cours,etudes_precedentes, etudiant,
-     etudiant_session,inscription,student_certification, file = 'student_success.RData')
+cours <-fread(paste0(path.to.data.directory,clara.table,'.txt'),sep = ',',
+              col.names = fmt$V7)
+
+## ---- inscription ----
+clara.table<-'Inscription'
+fmt<-fread(paste0(path.to.data.directory,clara.table,'.fmt'))
+
+inscription <-fread(paste0(path.to.data.directory,clara.table,'.txt'),sep = ',',
+                    col.names = fmt$V7,drop = nrow(fmt))
+
+## ---- student-certification ----
+clara.table<-'StudentCertification'
+fmt<-fread(paste0(path.to.data.directory,clara.table,'.fmt'))
+
+student_certification <-fread(paste0(path.to.data.directory,clara.table,'.txt'),sep = ',',
+                              col.names = fmt$V7)
+setnames(student_certification,'AnSession','ansession')
+
+## ---- certification-type ----
+clara.table<-'CertificationType'
+fmt<-fread(paste0(path.to.data.directory,clara.table,'.fmt'))
+
+certification_type <-fread(paste0(path.to.data.directory,clara.table,'.txt'),sep = ',',
+                           col.names = fmt$V7)
+
+## ---- evaluation-etudiant ----
+clara.table<-'EvaluationEtudiant'
+fmt<-fread(paste0(path.to.data.directory,clara.table,'.fmt'))
+
+evaluation_etudiant <-fread(paste0(path.to.data.directory,clara.table,'.txt'),sep = ',',
+                            col.names = fmt$V7)
+setnames(evaluation_etudiant,'AnSession','ansession')
+setnames(evaluation_etudiant,'IdGroupe','IDGroupe')
+
+## ---- etudiant-cours-secondaire ----
+clara.table<-'EtudiantCoursSecondaire'
+fmt<-fread(paste0(path.to.data.directory,clara.table,'.fmt'))
+
+lines<-paste0(path.to.data.directory,clara.table,'.txt') %>% readLines()
+bad.rows <- which(stringr::str_count(lines,',') >= 18)
+for (i in 1:length(bad.rows)){
+  count<-stringr::str_count(lines[bad.rows[i]],',')
+  if(count==18){
+    chartorem<-gregexpr(pattern =',',lines[bad.rows[i]])[[1]][17]
+    halfstr<-substr(lines[bad.rows[i]],0,chartorem-1)
+    halfstr2<-substr(lines[bad.rows[i]],chartorem+1,stringr::str_length(lines[bad.rows[i]]))
+    lines[bad.rows[i]]<-stringr::str_c(halfstr,halfstr2,sep="")
+  }
+  else if(count==19){
+    chartorem<-gregexpr(pattern =',',lines[bad.rows[i]])[[1]][17]
+    chartorem2<-gregexpr(pattern =',',lines[bad.rows[i]])[[1]][18]
+    thirdstr<-substr(lines[bad.rows[i]],0,chartorem-1)
+    thirdstr2<-substr(lines[bad.rows[i]],chartorem+1,chartorem2-2)
+    thirdstr3<-substr(lines[bad.rows[i]],chartorem2+1,stringr::str_length(lines[bad.rows[i]]))
+    lines[bad.rows[i]]<-stringr::str_c(thirdstr,thirdstr2,thirdstr3,sep="")
+  }
+}
+li<-paste(lines,collapse='\n')
+
+write(li,paste0(path.to.data.directory,'EtudiantCoursSecondaireClean1','.txt'),ncolumns=18)
+etudiant_cours_secondaire <-fread(paste0(path.to.data.directory,'EtudiantCoursSecondaireClean1','.txt'),sep = ',',
+                                  col.names = fmt$V7)
+
+rm(clara.table,fmt)
+
+save.image(file = paste0(path.to.data.directory,'student_success.RData'))

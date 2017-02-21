@@ -3,6 +3,12 @@
 
 # let us first boost the admissions table with genter and HS provenance.
 
+<<<<<<< HEAD
+=======
+#Meeting plan for Sameer and I Thursday:
+#Understand git branches (checkout, merge, add, commit)
+
+>>>>>>> findingDO
 # ---- load data
 rm(list=ls())
 path.to.data.directory<-"C:/Work/JAC/PAREA/CEGEP_Data_mining_for_student_success/DawsonCollege/ScienceProgram/2016/FindingDO/"
