@@ -1,3 +1,4 @@
+
 # This file will use the list of DO found in the DOfinder files and use it to figure things out about them.
 
 
@@ -9,6 +10,11 @@
 #Gender from etudiant, langue maternelle, postal code?
 #Note, COteR from inscription table
 
+#Clean up this file and have DOfinder be DO-functions remove all the inputs and libraries to it so that every file
+#that I create afterwards will be using from this functions.
+
+#Create a RProj file so that all files will be put in the same project.
+
 ## ---- load-data ----
 rm(list=ls())
 path.to.data.directory<-"C:/Work/JAC/PAREA/CEGEP_Data_mining_for_student_success/DawsonCollege/ScienceProgram/2016/FindingDO/"
@@ -18,81 +24,138 @@ library(data.table)
 library(magrittr)
 library(knitr)
 library(ggplot2)
+library(caret)
+library(pROC)
 
 source('DOfinder.R')
-DO<-DOfinder(20103)
+DO<-DOfinder(20103,20083)
 
 #Start fresh by looking at the SO status for many of the DOs. The hunch is that MANY people DO without ever registering
 #for a single class meaning that they would show up in admission, but not in inscription. 
-#this may be as large as HALF the DOs ever admitted by the college. 
+#this may be as large as HALF the DOs ever admitted by the college.
+DOS<-etudiant_session$student_number %in% DO$student_number
+DOG<-etudiant_session$student_number %in% student_certification$student_number
 
-## ---- DO-Admin ----
-AdCounted<-DO[student_number %in% admission$student_number]
-length(unique(AdCounted$student_number))
+etudiant_session[,DO:=ifelse(DOS,1,ifelse(DOG,0,0))]
 
-AdLeftout<- DO[student_number %NI% admission$student_number]
-length(unique(AdLeftout$student_number))
+DOfinder <- glm(DO ~ program + SPE + TypeFrequentation,etudiant_session,family="binomial")
+summary(DOfinder)
 
-## ---- IDESDO ----
+ES <- etudiant_session
+ES$Pred <- predict(DOfinder,ES,type="response")
+
+#confusionMatrix(data2$Pred,data2$WITHDRAWAL)
+rocCur<-roc(etudiant_session$DO,ES$Pred)
+auc(rocCur)
+#Area under the curve: 0.84
+ci.auc(rocCur)
+#0.838-0.841
+
+## ---- IDESDO ---- 
 IDESDO<-etudiant_session[student_number %in% DO$student_number][,.(student_number,IDEtudiantSession,SPE,
                                                                    TypeFrequentation)]
-IDESDO[,':=' (COUNT=.N),by=student_number]
+IDESDO[,DO:=ifelse(etudiant_session$student_number == DO[student_number],1,ifelse(etudiant_session$student_number
+                                                    == student_certification$student_number,0,0))]
 IDESDO[,.N,by=COUNT]
-IDESDO1<-IDESDO[IDESDO$COUNT==1]
-
-## ---- Test ----
-InCounted<-IDESDO[IDEtudiantSession %in% inscription$IDEtudiantSession]
-length(unique(InCounted$student_number))
-#There are 20.6k here.
-
-InLeftout<- IDESDO[IDEtudiantSession %NI% inscription$IDEtudiantSession]
-length(unique(InLeftout$student_number))
-#36k. This means that at one time or another ALL DOs had a IDES that wasn't in inscription. I think this means 
-#that they were registered, but didn't take any classes. This may be the case for every single student...checking:
-t<-etudiant_session[IDEtudiantSession %NI% inscription$IDEtudiantSession]
-length(unique(etudiant_session$student_number))
-length(unique(t$student_number))
-#So it isn't the case, but it is for almost every single student but 17k. Some people have TPL,TPL,TPL,TPL and then out
-# the tricky part happens when the SO gets put in there...
 
 ## ----DO stats ----
-DOstat<- etudiant_session[student_number %in% AdLeftout$student_number][,.(student_number,TypeFrequentation,ansession,IDEtudiantSession)]
+DOstat<- etudiant_session[student_number %in% DO$student_number][,.(student_number,TypeFrequentation,ansession,IDEtudiantSession)]
 DOstat[,.N, by=TypeFrequentation]
 DOstat[, ':=' (COUNT = .N), by=student_number]
-DOstat1<-etudiant_session[student_number %in% IDESDO1$student_number][,.(student_number,TypeFrequentation,ansession,IDEtudiantSession)]
-DOstat1SO<-DOstat1[TypeFrequentation=="SO"]
+DOstatSO<-DOstat[TypeFrequentation=="SO"]
+
 
 ## ---- Test ----
 
 #Has anyone with SO as frequentation ever graduated?
 gradcheck<- etudiant_session[student_number %in% student_certification$student_number][,.(student_number,TypeFrequentation)]
-#Yes, many people have SOs. When do they get put in there?
-length(unique(gradcheck$student_number[which(gradcheck$TypeFrequentation=="SO")]))
-#17817
+gradcheck[, ':=' (COUNT = .N), by=student_number]
+#Yes, many people have SOs. When do they get put in there? 
 length(unique(gradcheck$student_number))
-#28349
+#28660
+length(unique(gradcheck$student_number[gradcheck$TypeFrequentation=="SO"]))
+#17927
+#About 63% of graduates have an SO status in their profile in contrast to 13468/14038 (96% of DOs)
+#It seems that there is little difference between the presence of SO status for people who DO or grad
 
-#Let's look at the inscription table to see if there is anything different there.
 ## ---- Ins ----
-InIDESDO <- inscription[IDEtudiantSession %in% DOstat1SO$IDEtudiantSession]
+InIDESDO <- inscription[IDEtudiantSession %in% DOstatSO$IDEtudiantSession]
 InIDESDO[,.N,by=Note]
 
 ## ---- Test ----
+MSEDO<-eval_etudiant[student_number %in% DO$student_number]
+MSEgrad <- eval_etudiant[student_number %in% gradcheck$student_number]
+MSEDO[,.N,by=MSE]
+MSEgrad[,.N,by=MSE]
+#Are the ratios of passing, at risk and failing the same for DOs and grads?
+#Passing DO: 267541/327152 = 81.8
+#Passing grad: 477441/543562 = 87.7
 
-#There are 128k unique IDES that corresponds to ALL DOs. 
-#When switching to inscription, it drops to 83k as seen by the length InCounted.
+#At-risk DO: 30299/327152 = 9.3
+#At-risk grad: 38205/543562 = 7.0
+
+#Failing DO: 24472/327152 = 7.5
+#Failing grad: 22691/543562 = 4.2
+
+#By definition, this means that there are plenty of students who get a failing MSE, but pass. 
+
+#Let's try focusing on the semester when the DO happens.
+
+#I want to grab the last lines where a student number appears. This is hard... 
+
+#Let's try looking at the average performance of DO vs grads. 
+temp1<-MSEDO[student_number %in% etudiant_session$student_number]
+temp2<-etudiant_session[student_number %in% MSEDO$student_number]
+
+setkey(temp1,temp2,student_number)
+
+## ---- Predicting DOs ----
+AdDO<-admission[student_number %in% DO$student_number]
+Adgrad<-admission[student_number %in% student_certification$student_number]
+
+admission[,DO:=ifelse(admission$student_number %in% DO$student_number,1,ifelse(admission$student_number %in% 
+                                                          student_certification$student_number,0,0))]
+
+DOfind <- glm(DO ~ program + reforme + population + IndicateurReadmission, admission,family="binomial")
+summary(DOfind)
+
+adm2 <- admission
+adm2$Pred <- predict(DOfind,adm2,type="response")
+
+confusionMatrix(round(adm2$Pred),admission$DO)
+rocCur<-roc(admission$DO,adm2$Pred)
+auc(rocCur)
+#Area under the curve: 0.859
+ci.auc(rocCur)
+#0.856-0.862
+
+## ---- Test----
 
 
-#Find the number of DO who have only 1 semester in the college with SO as their status. 
-#There are 167k lines to grad check (because they all show up a fuck ton of times (many classes) with 28k unique stus
-#There are 15k lines to DOstat and 15k uniques because they all only took 1 class (if that...)
+## ---- MSE ----
+#Let's build a prediction model based on the MSE evals only. 
 
-#Leftout<- DO[student_number %NI% DO1$student_number]
-#This gives 15k students who are in the DOfinder list, but NOT the admission's table.  
-#Correct<-DO[student_number %NI% Leftout$student_number]
-#This is the unique number of students who are in the DOlis and in the admissions table. 
+DOS1<-eval_etudiant$student_number %in% DO$student_number
+DOG1<-eval_etudiant$student_number %in% student_certification$student_number
+eval_etudiant[,DO:=ifelse(DOS1,1,ifelse(DOG1,0,0))]
 
-doublets<-DO1[,.SD,by=student_number][duplicated(DO1,by="student_number")]
+#I want to replace the fucking IDgroupe with the fucking class number... can't we take parameters form
+#two tables when merging things. I know this will get solved in 5 minutes.
+
+names(eval_etudiant)[3]<-paste("IDGroupe")
+names(cours)[1]<-paste("IDGroupe")
+setkey(cours,IDGroupe)
+setkey(eval_etudiant,IDGroupe)
+eval_etudiant<-merge(eval_etudiant,cours,by="IDGroupe")
+
+eval_etudiant[,cours:=]
+
+
+
+
+
+## ---- Test 
+
 
 #There are 10k people who were re-admitted! (readmission ==1)
 
